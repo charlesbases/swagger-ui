@@ -13,33 +13,33 @@ import (
 	"github.com/urfave/negroni"
 )
 
+const dist = "/swagger/"
+
 var (
-	// httpPort port
-	httpPort = ":8888"
-	// swaggerAPI api folder
-	swaggerAPI = "api"
+	// port port
+	port = ":8888"
+	// folder api folder
+	folder = "./swagger/api"
 )
 
 func init() {
 	if envPort := os.Getenv("SWAGGER_PORT"); len(envPort) != 0 {
-		httpPort = envPort
+		port = envPort
 	}
-	if envAPI := os.Getenv("SWAGGER_DOC"); len(envAPI) != 0 {
-		swaggerAPI = envAPI
+	if envPath := os.Getenv("SWAGGER_PATH"); len(envPath) != 0 {
+		folder = envPath
 	}
-
-	os.MkdirAll(swaggerAPI, 0755)
 }
 
 func main() {
 	r := mux.NewRouter()
-	r.PathPrefix("/swagger").Handler(fileserver())
+	r.PathPrefix(dist).Handler(fileserver())
 
 	n := negroni.New()
 	n.Use(recovery())
 	n.UseHandler(r)
 
-	n.Run(httpPort)
+	n.Run(port)
 }
 
 // rec .
@@ -63,27 +63,27 @@ func (rec) ServeHTTP(rw http.ResponseWriter, r *http.Request, next http.HandlerF
 	next(rw, r)
 }
 
-type fs struct {
-	fileServer    http.Handler
-	apiFileServer http.FileSystem
+type fileServer struct {
+	handler http.Handler
+	fsystem http.FileSystem
 }
 
 // fileserver .
-func fileserver() *fs {
-	return &fs{
-		fileServer:    http.FileServer(http.Dir(".")),
-		apiFileServer: http.Dir(swaggerAPI),
+func fileserver() *fileServer {
+	return &fileServer{
+		handler: http.FileServer(http.Dir(".")),
+		fsystem: http.Dir(folder),
 	}
 }
 
 // ServeHTTP .
-func (fs *fs) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+func (fs *fileServer) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	if strings.HasSuffix(r.URL.Path, ".json") {
-		api := strings.TrimPrefix(r.URL.Path, "/swagger/")
+		subpath := strings.TrimPrefix(r.URL.Path, dist)
 
-		f, err := fs.apiFileServer.Open(api)
+		f, err := fs.fsystem.Open(subpath)
 		if err != nil {
-			http.Error(rw, fmt.Sprintf("%s not found or permission denied", api), http.StatusNotFound)
+			http.Error(rw, fmt.Sprintf("%s not found or permission denied", subpath), http.StatusNotFound)
 			return
 		}
 
@@ -91,11 +91,11 @@ func (fs *fs) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		io.Copy(buf, f)
 		f.Close()
 
-		rw.Header().Set("Content-Type", "text/html; charset=utf-8")
+		rw.Header().Set("Content-Type", "application/json; charset=utf-8")
 		rw.WriteHeader(http.StatusOK)
 		rw.Write(buf.Bytes())
 		return
 	}
 
-	fs.fileServer.ServeHTTP(rw, r)
+	fs.handler.ServeHTTP(rw, r)
 }

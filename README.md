@@ -12,7 +12,7 @@ http://127.0.0.1:8888/swagger
   web ui 端口。默认：8888
   ```
 
-- SWAGGER_DOC
+- SWAGGER_PATH
 
   ```
   文档 json 文件夹。默认：./api
@@ -30,8 +30,8 @@ http://127.0.0.1:8888/swagger
 
   ```shell
   git clone https://github.com/charlesbases/swagger-ui.git
-  
+
   cd swagger-ui && make
-  
+
   # 需要挂载容器内 '/swagger/api' 文件夹
   ```
