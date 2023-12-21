@@ -13,7 +13,7 @@ import (
 	"github.com/urfave/negroni"
 )
 
-const dist = "/swagger/"
+const dist = "/swagger"
 
 var (
 	// port port
